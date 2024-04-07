@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using UnityEngine.UI;
+using Photon.Realtime;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -23,7 +24,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     [Header("Create Room Panel")]
     public GameObject CreateRoomUIPanel;
-
+    public InputField RoomNameInputField;
+    public string gameMode;
     [Header("Inside Room Panel")]
     public GameObject InsideRoomUIPanel;
 
@@ -89,7 +91,38 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         Debug.Log($"{PhotonNetwork.LocalPlayer.NickName} is connected to Photon");
         ActivatePanel(GameOptionsUIPanel.name);
     }
+    public override void OnCreatedRoom()
+    {
+        Debug.Log(PhotonNetwork.CurrentRoom.Name + " Is created");
+    }
 
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        base.OnCreateRoomFailed(returnCode, message);
+    }
+
+    public override void OnJoinedRoom()
+    {
+        Debug.Log(PhotonNetwork.LocalPlayer.NickName + " Joined Room " + PhotonNetwork.CurrentRoom.Name);
+        if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("gm"))
+        {
+            object gamemodeName;
+            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gm", out gamemodeName))
+            {
+                Debug.Log($"{gamemodeName.ToString()}");
+            }
+        }
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        base.OnJoinRoomFailed(returnCode, message);
+    }
+
+    public override void OnJoinRandomFailed(short returnCode, string message)
+    {
+        base.OnJoinRandomFailed(returnCode, message);
+    }
     #endregion
 
 
@@ -108,6 +141,42 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public void OnCancelButtonClicked()
     {
         ActivatePanel(GameOptionsUIPanel.name);
+    }
+
+    public void OnCreateRoomClicked()
+    {
+        
+        if(string.IsNullOrEmpty(gameMode)) {
+            Debug.LogError($"Invalid Gamemode");
+            return; 
+        }
+        ActivatePanel(CreatingRoomInfoUIPanel.name);
+        string roomName = RoomNameInputField.text;
+        if (string.IsNullOrEmpty(roomName)) {
+            roomName = $"Room {Random.Range(0, 1000)}";
+        }
+
+        RoomOptions roomOptions = new RoomOptions();
+        roomOptions.MaxPlayers = 3;
+
+        string[] roomPropsInLobby = { "gm" };//gm = gamemode
+
+        //two game modes
+        //racing = rc
+        //death race = dr
+
+        ExitGames.Client.Photon.Hashtable customRoomProperties = new ExitGames.Client.Photon.Hashtable() { { "gm", gameMode } };
+
+        //naming custom room properties for lobby
+        roomOptions.CustomRoomPropertiesForLobby = roomPropsInLobby;
+        roomOptions.CustomRoomProperties = customRoomProperties;
+        PhotonNetwork.CreateRoom(roomName, roomOptions);
+
+    }
+
+    public void SetGameMode(string _gameMode)
+    {
+        gameMode  = _gameMode;
     }
     #endregion
 
